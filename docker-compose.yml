@@ -1,0 +1,27 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: owm-mongo
+    ports:
+      - 27018:27017
+    volumes:
+      - owm-mongo-data:/data/db
+  
+  api:
+    build: .
+    image: owm-api:local
+    container_name: owm-api
+    depends_on:
+      - mongo
+    ports:
+      - 5001:5001
+    environment:
+      DATABASE: mongodb://mongo:27017/owmInventory
+    env_file:
+      - config.docker.env
+    volumes:
+      - owm-uploads:/app/routes/uploads
+
+volumes:
+  owm-mongo-data:
+  owm-uploads:

@@ -1,0 +1,10 @@
+node_modules
+node_modules/
+/node_modules
+python-server
+dev-data
+config.env
+config.docker.env
+.prettierrc
+github-command.txt
+docker-revision-guide.md

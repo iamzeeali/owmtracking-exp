@@ -1,0 +1,12 @@
+node_modules
+client/node_modules
+client/build
+.git
+.DS_Store
+npm-debug.log
+config.env
+config.docker.env
+.env
+*.md
+test
+dev-data
