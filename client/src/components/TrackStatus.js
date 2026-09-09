@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Link, useHistory } from "react-router-dom";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import "./TrackStatus.css";
 
 const STEP_ICON = {
@@ -30,6 +33,60 @@ const DetailRow = ({ label, value }) => (
     <dd className="ts-api-detail-value">{value}</dd>
   </div>
 );
+
+const vehicleIcon = L.divIcon({
+  className: "ts-api-vehicle-marker",
+  html: '<span class="ts-api-vehicle-marker-pin"><i class="fa fa-truck"></i></span>',
+  iconSize: [42, 42],
+  iconAnchor: [21, 42],
+});
+
+const UpdateMapView = ({ position }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(position, 14);
+    const resizeId = window.setTimeout(() => map.invalidateSize(), 0);
+    return () => window.clearTimeout(resizeId);
+  }, [map, position]);
+
+  return null;
+};
+
+const VehicleLocationMap = ({ location }) => {
+  if (!location) {
+    return (
+      <div className="ts-api-location-empty">
+        <i className="fa fa-map-marker" aria-hidden />
+        <p>Live location is not available for this vehicle yet.</p>
+      </div>
+    );
+  }
+
+  const latitude = Number(location.latitude);
+  const longitude = Number(location.longitude);
+  const position = [latitude, longitude];
+
+  return (
+    <>
+      <div className="ts-api-location-map" aria-label={`Current location of vehicle ${location.vehicleNumber || ""}`}>
+        <MapContainer center={position} zoom={14} scrollWheelZoom={false} className="ts-api-location-map-canvas">
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <Marker position={position} icon={vehicleIcon} />
+          <UpdateMapView position={position} />
+        </MapContainer>
+      </div>
+      <div className="ts-api-location-meta">
+        <span><i className="fa fa-circle ts-api-location-live-dot" aria-hidden /> Live GPS</span>
+        {location.updatedAtLabel ? <span>Updated {location.updatedAtLabel}</span> : null}
+        {location.speed !== null ? <span>{location.speed} km/h</span> : null}
+      </div>
+    </>
+  );
+};
 
 const TrackStatus = ({ match }) => {
   const history = useHistory();
@@ -68,8 +125,10 @@ const TrackStatus = ({ match }) => {
     };
 
     loadTracking();
+    const refreshId = window.setInterval(loadTracking, 60000);
     return () => {
       active = false;
+      window.clearInterval(refreshId);
     };
   }, [match.params.id]);
 
@@ -201,37 +260,52 @@ const TrackStatus = ({ match }) => {
               </div>
 
               <div className="col-lg-7 col-md-12 ts-api-col">
-                <div className="details-inner ts-api-card ts-api-details-card">
-                  <h2 className="ts-api-card-title">Shipment details</h2>
-                  <p className="ts-api-card-desc">
-                    Origin, destination, and current status for this consignment.
-                  </p>
+                <div className="ts-api-details-location-stack">
+                  <div className="details-inner ts-api-card ts-api-details-card">
+                    <h2 className="ts-api-card-title">Shipment details</h2>
+                    <p className="ts-api-card-desc">
+                      Origin, destination, and current status for this consignment.
+                    </p>
 
-                  <section className="ts-api-section">
-                    <h3 className="ts-api-section-title">Pickup</h3>
-                    <dl className="ts-api-dl">
-                      <DetailRow label="Vendor" value={safe(details.vendorName)} />
-                      <DetailRow
-                        label="Collection location"
-                        value={safe(details.collectionLocationCode)}
-                      />
-                    </dl>
-                  </section>
+                    <section className="ts-api-section">
+                      <h3 className="ts-api-section-title">Pickup</h3>
+                      <dl className="ts-api-dl">
+                        <DetailRow label="Vendor" value={safe(details.vendorName)} />
+                        <DetailRow
+                          label="Collection location"
+                          value={safe(details.collectionLocationCode)}
+                        />
+                      </dl>
+                    </section>
 
-                  <section className="ts-api-section">
-                    <h3 className="ts-api-section-title">Delivery &amp; status</h3>
-                    <dl className="ts-api-dl">
-                      <DetailRow
-                        label="Delivery location"
-                        value={safe(details.deliveryLocation)}
-                      />
-                      <DetailRow label="Store" value={safe(details.store)} />
-                      <DetailRow
-                        label="Vehicle number"
-                        value={safe(details.vehicleNumber)}
-                      />
-                      <DetailRow label="Current status" value={safe(statusLabel)} />
-                    </dl>
+                    <section className="ts-api-section">
+                      <h3 className="ts-api-section-title">Delivery &amp; status</h3>
+                      <dl className="ts-api-dl">
+                        <DetailRow
+                          label="Delivery location"
+                          value={safe(details.deliveryLocation)}
+                        />
+                        <DetailRow label="Store" value={safe(details.store)} />
+                        <DetailRow
+                          label="Vehicle number"
+                          value={safe(details.vehicleNumber)}
+                        />
+                        <DetailRow label="Current status" value={safe(statusLabel)} />
+                      </dl>
+                    </section>
+                  </div>
+
+                  <section className="ts-api-card ts-api-location-card" aria-label="Vehicle current location">
+                    <div className="ts-api-location-heading">
+                      <div>
+                        <h2 className="ts-api-card-title">Current vehicle location</h2>
+                        <p className="ts-api-card-desc">Live position from the vehicle GPS device.</p>
+                      </div>
+                      {trackingData && trackingData.location ? (
+                        <span className="ts-api-location-vehicle">{trackingData.location.vehicleNumber}</span>
+                      ) : null}
+                    </div>
+                    <VehicleLocationMap location={trackingData ? trackingData.location : null} />
                   </section>
                 </div>
               </div>

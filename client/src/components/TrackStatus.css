@@ -437,6 +437,35 @@
   }
 }
 
+/* The compact details panel and live map share the same right-hand column. */
+.track-status-api .ts-api-details-location-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.track-status-api .ts-api-details-card {
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+.track-status-api .ts-api-details-card .ts-api-card-desc {
+  margin-bottom: 10px;
+}
+
+.track-status-api .ts-api-details-card .ts-api-section {
+  margin-bottom: 8px;
+}
+
+.track-status-api .ts-api-details-card .ts-api-section-title {
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+}
+
+.track-status-api .ts-api-details-card .ts-api-detail-row {
+  padding: 6px 0;
+}
+
 /* Shared card shell */
 .track-status-api .ts-api-card {
   background: var(--card-bg, #fff);
@@ -609,6 +638,105 @@
   font-weight: 500;
   color: var(--text-main, #111827);
   word-break: break-word;
+}
+
+/* Live vehicle position */
+.track-status-api .ts-api-location-card {
+  height: auto;
+  margin-top: 0;
+}
+
+.track-status-api .ts-api-location-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.track-status-api .ts-api-location-heading .ts-api-card-desc {
+  margin-bottom: 16px;
+}
+
+.track-status-api .ts-api-location-vehicle {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(13, 95, 136, 0.1);
+  color: var(--brand, #0d5f88);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.track-status-api .ts-api-location-map {
+  width: 100%;
+  height: 300px;
+  overflow: hidden;
+  border: 1px solid var(--border-soft, #e5e7eb);
+  border-radius: 12px;
+}
+
+.track-status-api .ts-api-location-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.ts-api-vehicle-marker {
+  background: transparent;
+  border: 0;
+}
+
+.ts-api-vehicle-marker-pin {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: #0d5f88;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.3);
+  transform: rotate(-45deg);
+}
+
+.ts-api-vehicle-marker-pin .fa {
+  transform: rotate(45deg);
+}
+
+.track-status-api .ts-api-location-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  color: var(--text-muted, #6b7280);
+  font-size: 0.75rem;
+}
+
+.track-status-api .ts-api-location-live-dot {
+  color: #10b981;
+  font-size: 0.625rem;
+}
+
+.track-status-api .ts-api-location-empty {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px dashed var(--border-soft, #e5e7eb);
+  border-radius: 12px;
+  color: var(--text-muted, #6b7280);
+  text-align: center;
+}
+
+.track-status-api .ts-api-location-empty .fa {
+  font-size: 1.5rem;
+}
+
+.track-status-api .ts-api-location-empty p {
+  margin: 0;
+  font-size: 0.875rem;
 }
 
 @media (max-width: 520px) {

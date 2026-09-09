@@ -1,5 +1,6 @@
 const Asn = require("../models/asnModel");
 const Grn = require("../models/grnModel");
+const { getCurrentVehicleLocation } = require("./wheelseyeLocationService");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -296,7 +297,7 @@ const getTrackingByEcci = async (ecciNumber) => {
     modeOfDelivery: "DIRECT DELIVERY",
   });
 
-  return computeTrackingFromRecords({
+  const payload = computeTrackingFromRecords({
     ecciNumber,
     asn,
     received,
@@ -304,6 +305,15 @@ const getTrackingByEcci = async (ecciNumber) => {
     ddTransit,
     ddDo,
   });
+
+  try {
+    payload.location = await getCurrentVehicleLocation(payload.details.vehicleNumber);
+  } catch (error) {
+    // GPS availability must not prevent the rest of the shipment status loading.
+    payload.location = null;
+  }
+
+  return payload;
 };
 
 module.exports = {
