@@ -23,8 +23,8 @@ var path = require('path');
 
 const app = express();
 
-const DB = process.env.DATABASE;
-// const DB = 'mongodb://zeeshan:globus2015@localhost:27017/owmInventory?authSource=admin&readPreference=primary&ssl=false'
+//const DB = process.env.DATABASE;
+const DB = 'mongodb://zeeshan:globus2015@localhost:27017/owmInventory?authSource=admin&readPreference=primary&ssl=false'
 
 mongoose
   .connect(DB, {
