@@ -39,7 +39,17 @@ mongoose
 
 app.use(cors());
 //set security http headers
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        // Leaflet loads the map tiles from OpenStreetMap's a/b/c subdomains.
+        // Keep all other image sources restricted to the application and data URLs.
+        imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org"],
+      },
+    },
+  })
+);
 
 //development logging
 if (
