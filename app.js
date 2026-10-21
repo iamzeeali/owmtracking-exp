@@ -43,6 +43,7 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
+        defaultSrc: ["'self'"],
         // Leaflet loads the map tiles from OpenStreetMap's a/b/c subdomains.
         // Keep all other image sources restricted to the application and data URLs.
         imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org"],
