@@ -117,9 +117,25 @@ const TrackStatus = ({ match }) => {
         if (!active) return;
         const data = res.data && res.data.data ? res.data.data : null;
         setTrackingData(data);
-        console.info("[OWM GPS] Current vehicle location:", data ? data.location : null);
+        console.groupCollapsed(`[OWM GPS] Tracking request: ${match.params.id}`);
+        console.info("API request:", res.config.url);
+        console.info("Shipment vehicle number:", data?.details?.vehicleNumber || "not available");
+        console.info("GPS location:", data?.location || null);
+        if (data?.gpsDebug) console.info("Backend GPS diagnostic:", data.gpsDebug);
+        if (!data?.location) {
+          console.warn(
+            "GPS location is null. Enable GPS_DEBUG=true on the backend and inspect the backend diagnostic above or server logs."
+          );
+        }
+        console.groupEnd();
       } catch (err) {
         if (!active) return;
+        console.error("[OWM GPS] Tracking API request failed:", {
+          url: `/api/tracking/${match.params.id}`,
+          status: err.response?.status || null,
+          response: err.response?.data || null,
+          message: err.message,
+        });
         setError("Unable to load tracking details right now.");
       } finally {
         if (active) setLoading(false);

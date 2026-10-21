@@ -306,12 +306,28 @@ const getTrackingByEcci = async (ecciNumber) => {
     ddDo,
   });
 
+  let gpsDiagnostic = null;
+  const onGpsDiagnostic = (diagnostic) => {
+    gpsDiagnostic = diagnostic;
+    console.info("[OWM GPS] Lookup result:", JSON.stringify({ ecciNumber, ...diagnostic }));
+  };
+
   try {
-    payload.location = await getCurrentVehicleLocation(payload.details.vehicleNumber);
+    payload.location = await getCurrentVehicleLocation(payload.details.vehicleNumber, {
+      onDiagnostic: onGpsDiagnostic,
+    });
   } catch (error) {
     // GPS availability must not prevent the rest of the shipment status loading.
+    gpsDiagnostic = error.gpsDiagnostic || { code: "GPS_LOOKUP_FAILED" };
+    console.error(
+      "[OWM GPS] Location lookup failed:",
+      JSON.stringify({ ecciNumber, ...gpsDiagnostic, message: error.message })
+    );
     payload.location = null;
   }
+
+  // Diagnostics are opt-in because they can contain a shipment vehicle identifier.
+  if (process.env.GPS_DEBUG === "true") payload.gpsDebug = gpsDiagnostic;
 
   return payload;
 };

@@ -9,6 +9,16 @@ const getVehicleList = (payload) => {
   return [];
 };
 
+const reportDiagnostic = (options, diagnostic) => {
+  if (typeof options.onDiagnostic === "function") options.onDiagnostic(diagnostic);
+};
+
+const createGpsError = (message, diagnostic) => {
+  const error = new Error(message);
+  error.gpsDiagnostic = diagnostic;
+  return error;
+};
+
 const toIsoDate = (epochSeconds) => {
   const epoch = Number(epochSeconds);
   return Number.isFinite(epoch) ? new Date(epoch * 1000).toISOString() : null;
@@ -33,12 +43,22 @@ const toCurrentLocation = (record) => {
 
 const getCurrentVehicleLocation = async (vehicleNumber, options = {}) => {
   const accessToken = options.accessToken || process.env.WHEELSEYE_ACCESS_TOKEN;
-  if (!accessToken || !normalizeVehicleNumber(vehicleNumber)) return null;
+  if (!accessToken) {
+    reportDiagnostic(options, { code: "GPS_TOKEN_MISSING" });
+    return null;
+  }
+
+  if (!normalizeVehicleNumber(vehicleNumber)) {
+    reportDiagnostic(options, { code: "GPS_VEHICLE_NUMBER_MISSING" });
+    return null;
+  }
 
   const endpoint = options.endpoint || process.env.WHEELSEYE_API_URL || DEFAULT_ENDPOINT;
   const fetchImpl = options.fetchImpl || global.fetch;
   if (typeof fetchImpl !== "function") {
-    throw new Error("A fetch implementation is required for Wheelseye GPS requests.");
+    throw createGpsError("A fetch implementation is required for Wheelseye GPS requests.", {
+      code: "GPS_FETCH_UNAVAILABLE",
+    });
   }
 
   const url = new URL(endpoint);
@@ -48,14 +68,41 @@ const getCurrentVehicleLocation = async (vehicleNumber, options = {}) => {
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const response = await fetchImpl(url, { signal: controller.signal });
-    if (!response.ok) throw new Error(`Wheelseye GPS request failed (${response.status}).`);
+    if (!response.ok) {
+      throw createGpsError(`Wheelseye GPS request failed (${response.status}).`, {
+        code: "GPS_PROVIDER_HTTP_ERROR",
+        httpStatus: response.status,
+      });
+    }
 
     const payload = await response.json();
     const wantedVehicle = normalizeVehicleNumber(vehicleNumber);
-    const record = getVehicleList(payload).find(
+    const vehicles = getVehicleList(payload);
+    const record = vehicles.find(
       (item) => normalizeVehicleNumber(item.vehicleNumber) === wantedVehicle
     );
-    return record ? toCurrentLocation(record) : null;
+    if (!record) {
+      reportDiagnostic(options, {
+        code: "GPS_VEHICLE_NOT_FOUND",
+        normalizedVehicleNumber: wantedVehicle,
+        providerRecordCount: vehicles.length,
+      });
+      return null;
+    }
+
+    const location = toCurrentLocation(record);
+    reportDiagnostic(options, {
+      code: location ? "GPS_LOCATION_FOUND" : "GPS_COORDINATES_INVALID",
+      providerRecordCount: vehicles.length,
+    });
+    return location;
+  } catch (error) {
+    if (!error.gpsDiagnostic) {
+      error.gpsDiagnostic = {
+        code: error.name === "AbortError" ? "GPS_PROVIDER_TIMEOUT" : "GPS_PROVIDER_NETWORK_ERROR",
+      };
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
