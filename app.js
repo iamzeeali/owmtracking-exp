@@ -49,6 +49,9 @@ app.use(
         imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org"],
       },
     },
+    // OpenStreetMap's public tile service needs the requesting site origin to
+    // identify browser traffic. This still omits the full tracking-page URL.
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   })
 );
 
