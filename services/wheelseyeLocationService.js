@@ -1,4 +1,6 @@
 const DEFAULT_ENDPOINT = "https://api.wheelseye.com/currentLoc";
+const http = require("http");
+const https = require("https");
 
 const normalizeVehicleNumber = (value) =>
   value ? String(value).toUpperCase().replace(/[^A-Z0-9]/g, "") : "";
@@ -18,6 +20,33 @@ const createGpsError = (message, diagnostic) => {
   error.gpsDiagnostic = diagnostic;
   return error;
 };
+
+// Node 18+ has global fetch. This fallback keeps the GPS integration working
+// when a hosting platform runs an older Node version.
+const requestJsonWithNode = (url, timeoutMs = 8000) =>
+  new Promise((resolve, reject) => {
+    const transport = url.protocol === "https:" ? https : http;
+    const request = transport.get(url, { headers: { Accept: "application/json" } }, (response) => {
+      const chunks = [];
+      response.on("data", (chunk) => chunks.push(chunk));
+      response.on("error", reject);
+      response.on("end", () => {
+        const body = Buffer.concat(chunks).toString("utf8");
+        resolve({
+          ok: response.statusCode >= 200 && response.statusCode < 300,
+          status: response.statusCode,
+          json: async () => JSON.parse(body),
+        });
+      });
+    });
+
+    request.setTimeout(timeoutMs, () => {
+      const error = new Error("Wheelseye GPS request timed out.");
+      error.name = "AbortError";
+      request.destroy(error);
+    });
+    request.on("error", reject);
+  });
 
 const toIsoDate = (epochSeconds) => {
   const epoch = Number(epochSeconds);
@@ -55,19 +84,23 @@ const getCurrentVehicleLocation = async (vehicleNumber, options = {}) => {
 
   const endpoint = options.endpoint || process.env.WHEELSEYE_API_URL || DEFAULT_ENDPOINT;
   const fetchImpl = options.fetchImpl || global.fetch;
-  if (typeof fetchImpl !== "function") {
-    throw createGpsError("A fetch implementation is required for Wheelseye GPS requests.", {
-      code: "GPS_FETCH_UNAVAILABLE",
-    });
-  }
 
   const url = new URL(endpoint);
   url.searchParams.set("accessToken", accessToken);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const response = await fetchImpl(url, { signal: controller.signal });
+    let response;
+    if (typeof fetchImpl === "function") {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        response = await fetchImpl(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
+    } else {
+      response = await requestJsonWithNode(url);
+    }
     if (!response.ok) {
       throw createGpsError(`Wheelseye GPS request failed (${response.status}).`, {
         code: "GPS_PROVIDER_HTTP_ERROR",
@@ -103,8 +136,6 @@ const getCurrentVehicleLocation = async (vehicleNumber, options = {}) => {
       };
     }
     throw error;
-  } finally {
-    clearTimeout(timeout);
   }
 };
 
