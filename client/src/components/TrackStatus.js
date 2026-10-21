@@ -115,7 +115,9 @@ const TrackStatus = ({ match }) => {
       try {
         const res = await axios.get(`/api/tracking/${match.params.id}`);
         if (!active) return;
-        setTrackingData(res.data && res.data.data ? res.data.data : null);
+        const data = res.data && res.data.data ? res.data.data : null;
+        setTrackingData(data);
+        console.info("[OWM GPS] Current vehicle location:", data ? data.location : null);
       } catch (err) {
         if (!active) return;
         setError("Unable to load tracking details right now.");
